@@ -25,6 +25,20 @@ const (
 	SaltLengthForAlgorithmV2 = 32
 )
 
+type AlgorithmStuff struct {
+	Algorithm  string
+	SaltLength int
+}
+
+func GetAlgorithm(version string) AlgorithmStuff {
+	switch version {
+	case "v1":
+		return AlgorithmStuff{Algorithm, SaltLengthForAlgorithm}
+	default:
+		return AlgorithmStuff{AlgorithmV2, SaltLengthForAlgorithmV2}
+	}
+}
+
 // CanonicalRequest =
 //
 //	HTTPRequestMethod + '\n' +
@@ -115,15 +129,15 @@ func RequestPayload(r *http.Request) ([]byte, error) {
 	return b, err
 }
 
-func StringToSign(canonicalRequest string) (string, error) {
+func StringToSign(canonicalRequest, algorithm string) (string, error) {
 	hexencode, err := HexEncodeSHA256Hash([]byte(canonicalRequest))
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s\n%s", AlgorithmV2, hexencode), nil
+	return fmt.Sprintf("%s\n%s", algorithm, hexencode), nil
 }
 
-func Sign(privateKeyData []byte, stringToSign string) (string, error) {
+func Sign(privateKeyData []byte, stringToSign string, salt int) (string, error) {
 	block, _ := pem.Decode(privateKeyData)
 	if block == nil {
 		return "", errors.New("invalid private key data")
@@ -138,7 +152,7 @@ func Sign(privateKeyData []byte, stringToSign string) (string, error) {
 	}
 	hashed := sha256.Sum256([]byte(stringToSign))
 	signature, err := rsa.SignPSS(rand.Reader, key, crypto.SHA256, hashed[:], &rsa.PSSOptions{
-		SaltLength: SaltLengthForAlgorithmV2,
+		SaltLength: salt,
 	})
 	if err != nil {
 		return "", err
@@ -155,8 +169,8 @@ func HexEncodeSHA256Hash(body []byte) (string, error) {
 	return fmt.Sprintf("%x", hash.Sum(nil)), err
 }
 
-func AuthHeaderValue(publicKeyID, signedHeaders, signature string) string {
-	return fmt.Sprintf("%s PublicKeyId=%s, SignedHeaders=%s, Signature=%s", AlgorithmV2, publicKeyID, signedHeaders, signature)
+func AuthHeaderValue(publicKeyID, signedHeaders, signature, algorithm string) string {
+	return fmt.Sprintf("%s PublicKeyId=%s, SignedHeaders=%s, Signature=%s", algorithm, publicKeyID, signedHeaders, signature)
 }
 
 func trimString(s string) string {

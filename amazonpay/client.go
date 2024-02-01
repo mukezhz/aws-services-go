@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/mukezhz/aws-services-go/amazonpay/signing"
 	"io"
 	"net/http"
 	"net/url"
 	"runtime"
 	"time"
+
+	"github.com/mukezhz/aws-services-go/amazonpay/signing"
 
 	"github.com/rs/xid"
 )
@@ -47,27 +47,28 @@ type Client struct {
 	Region      string
 	Sandbox     bool
 	HTTPClient  *http.Client
+	Algorithm   string
+	salt        int
+	endpoint    *url.URL
+}
 
-	endpoint *url.URL
+type ClientInput struct {
+	PublicKeyID string
+	PrivateKey  []byte
+	Region      string
+	Sandbox     bool
+	HTTPClient  *http.Client
+	Version     string
 }
 
 // New returns a new pay client instance.
-func New(publicKeyID string, privateKey []byte, region string, sandbox bool, httpClient *http.Client) (*Client, error) {
-	if publicKeyID == "" {
-		return nil, errors.New("missing publicKeyID")
-	}
-	if privateKey == nil {
-		return nil, errors.New("missing  privateKey")
-	}
-	if region == "" {
-		return nil, errors.New("missing region")
-	}
+func New(input ClientInput) (*Client, error) {
 	c := &Client{
-		PublicKeyID: publicKeyID,
-		PrivateKey:  privateKey,
-		Region:      region,
-		Sandbox:     sandbox,
-		HTTPClient:  httpClient,
+		PublicKeyID: input.PublicKeyID,
+		PrivateKey:  input.PrivateKey,
+		Region:      input.Region,
+		Sandbox:     input.Sandbox,
+		HTTPClient:  input.HTTPClient,
 	}
 	endpointURL := c.createEndpointURL()
 	u, err := url.Parse(endpointURL)
@@ -75,6 +76,13 @@ func New(publicKeyID string, privateKey []byte, region string, sandbox bool, htt
 		return nil, err
 	}
 	c.endpoint = u
+	version := input.Version
+	if input.Version != "v1" {
+		version = "v2"
+	}
+	al := signing.GetAlgorithm(version)
+	c.Algorithm = al.Algorithm
+	c.salt = al.SaltLength
 	return c, nil
 }
 
@@ -122,16 +130,16 @@ func (c *Client) NewRequest(method, path string, body interface{}) (*http.Reques
 	if err != nil {
 		return nil, err
 	}
-	stringToSign, err := signing.StringToSign(canonicalRequest)
+	stringToSign, err := signing.StringToSign(canonicalRequest, c.Algorithm)
 	if err != nil {
 		return nil, err
 	}
-	signature, err := signing.Sign(c.PrivateKey, stringToSign)
+	signature, err := signing.Sign(c.PrivateKey, stringToSign, c.salt)
 	if err != nil {
 		return nil, err
 	}
 	signedHeaders := signing.SignedHeaders(req)
-	authValue := signing.AuthHeaderValue(c.PublicKeyID, signedHeaders, signature)
+	authValue := signing.AuthHeaderValue(c.PublicKeyID, signedHeaders, signature, c.Algorithm)
 	req.Header.Set("Authorization", authValue)
 
 	return req, nil

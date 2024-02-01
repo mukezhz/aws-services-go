@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/mukezhz/aws-services-go/amazonpay/signing"
 	"net/http"
+
+	"github.com/mukezhz/aws-services-go/amazonpay/signing"
 )
 
 type CreateCheckoutSessionRequest struct {
@@ -31,11 +32,11 @@ func (c *CreateCheckoutSessionRequest) ToPayload() (string, error) {
 
 // GenerateButtonSignature method
 func (c *Client) GenerateButtonSignature(payload string) (string, error) {
-	stringToSign, err := signing.StringToSign(payload)
+	stringToSign, err := signing.StringToSign(payload, c.Algorithm)
 	if err != nil {
 		return "", err
 	}
-	signature, err := signing.Sign(c.PrivateKey, stringToSign)
+	signature, err := signing.Sign(c.PrivateKey, stringToSign, c.salt)
 	if err != nil {
 		return "", err
 	}
