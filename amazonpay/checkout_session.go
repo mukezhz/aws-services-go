@@ -12,6 +12,7 @@ import (
 type CreateCheckoutSessionRequest struct {
 	WebCheckoutDetails     *WebCheckoutDetails     `json:"webCheckoutDetails,omitempty"`
 	StoreID                string                  `json:"storeId,omitempty"`
+	Scopes                 []string                `json:"scopes,omitempty"`
 	ChargePermissionType   string                  `json:"chargePermissionType,omitempty"`
 	RecurringMetadata      *RecurringMetadata      `json:"recurringMetadata,omitempty"`
 	DeliverySpecifications *DeliverySpecifications `json:"deliverySpecifications,omitempty"`
@@ -20,6 +21,7 @@ type CreateCheckoutSessionRequest struct {
 	PlatformID             string                  `json:"platformId,omitempty"`
 	ProviderMetadata       *ProviderMetadata       `json:"providerMetadata,omitempty"`
 	AddressDetails         *AddressDetails         `json:"addressDetails,omitempty"`
+	ShippingDetails        *AddressDetails         `json:"shippingDetails,omitempty"`
 }
 
 func (c *CreateCheckoutSessionRequest) ToPayload() (string, error) {

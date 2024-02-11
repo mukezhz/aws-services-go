@@ -5,6 +5,7 @@ type WebCheckoutDetails struct {
 	CheckoutResultReturnURL string `json:"checkoutResultReturnUrl,omitempty"`
 	CheckoutCancelUrl       string `json:"checkoutCancelUrl,omitempty"`
 	AmazonPayRedirectURL    string `json:"amazonPayRedirectUrl,omitempty"`
+	CheckoutMode            string `json:"checkoutMode,omitempty"`
 }
 
 type Frequency struct {
